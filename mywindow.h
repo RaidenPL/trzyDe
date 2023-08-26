@@ -22,7 +22,9 @@ public:
     Punkt(){};
     ~Punkt();
 
+    Punkt(Punkt &p);
     void operator=(Punkt p);
+    void values();
 
 };
 
@@ -32,8 +34,6 @@ public:
   float data[4][4];
 
   Matrix();
-
-  void setIdentity();
 
   void setTranslation(float x, float y, float z);
 
@@ -54,15 +54,8 @@ public:
   void setPoints(Punkt &p);
 
   Punkt multiply(Punkt &p);
-};
 
-class Cube {
-public:
-  Matrix cube[8];
-
-  Cube(int r, float d = 10.0f);
-
-  void drawLines();
+  Punkt operator*(Punkt &p);
 };
 
 class MyWindow : public QWidget
@@ -103,6 +96,7 @@ private:
 
     Punkt cubePointsT[8];
     Punkt cubePoints[8];
+    Matrix tMatrix;
 
     std::array<int, 3> getPixelColor(Punkt p1);
     std::array<int, 3> getInterColor(float x, float y);

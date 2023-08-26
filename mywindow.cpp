@@ -4,6 +4,14 @@
 #define PI 3.14159265
 Punkt::~Punkt(){}
 
+Punkt::Punkt(Punkt &p)
+{
+    x = p.x;
+    y = p.y;
+    z = p.z;
+    w = p.w;
+}
+
 void Punkt::operator=(Punkt p)
 {
     x = p.x;
@@ -12,35 +20,32 @@ void Punkt::operator=(Punkt p)
     w = p.w;
 }
 
-Matrix::Matrix() {
-    memset(data, 0, sizeof(data));
-    setIdentity();
+void Punkt::values()
+{
+    std::cout<<"x: "<<x<<" y: "<<y<<" z: "<<z<<" w: "<<w<<std::endl;
 }
 
-void Matrix::setIdentity() {
-    memset(data, 0, sizeof(data));
-    data[0][0] = 1.0f;
-    data[1][1] = 1.0f;
-    data[2][2] = 1.0f;
-    data[3][3] = 1.0f;
+Matrix::Matrix() {
+    for (int i = 0; i < 4; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            data[i][j] = (i == j) ? 1.0 : 0.0;
+        }
+    }
+
 }
 
 void Matrix::setTranslation(float x, float y, float z) {
     Matrix temp;
-    temp.setIdentity();
-    temp.data[3][0] = x;
-    temp.data[3][1] = y;
-    temp.data[3][2] = z;
-
-//    data[3][0] = x;
-//    data[3][1] = y;
-//    data[3][2] = z;
+    temp.data[0][3] = x;
+    temp.data[1][3] = y;
+    temp.data[2][3] = z;
     multiply(temp);
 }
 
 void Matrix::setRotationX(float angle) {
     Matrix temp;
-    temp.setIdentity();
     float cosVal = cos(angle * PI / 180.0);
     float sinVal = sin(angle * PI / 180.0);
     temp.data[1][1] = cosVal;
@@ -52,7 +57,6 @@ void Matrix::setRotationX(float angle) {
 
 void Matrix::setRotationY(float angle) {
     Matrix temp;
-    temp.setIdentity();
     float cosVal = cosf(angle);
     float sinVal = sinf(angle);
     temp.data[0][0] = cosVal;
@@ -64,7 +68,6 @@ void Matrix::setRotationY(float angle) {
 
 void Matrix::setRotationZ(float angle) {
     Matrix temp;
-    temp.setIdentity();
     float cosVal = cosf(angle);
     float sinVal = sinf(angle);
     temp.data[0][0] = cosVal;
@@ -76,10 +79,10 @@ void Matrix::setRotationZ(float angle) {
 
 void Matrix::setScale(float scaleX, float scaleY, float scaleZ) {
     Matrix temp;
-    temp.setIdentity();
-    temp.data[0][0] = scaleX;
-    temp.data[1][1] = scaleY;
-    temp.data[2][2] = scaleZ;
+    temp.data[0][0] = scaleX+1;
+    temp.data[1][1] = scaleY+1;
+    temp.data[2][2] = scaleZ+1;
+    temp.data[3][3] = 1;
     multiply(temp);
 }
 
@@ -87,6 +90,7 @@ void Matrix::multiply(Matrix& matrix) {
     Matrix result;
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
+            result.data[i][j] = 0;
             for (int k = 0; k < 4; k++) {
                 result.data[i][j] += data[i][k] * matrix.data[k][j];
             }
@@ -126,6 +130,17 @@ void Matrix::setPoints(Punkt &p)
 Punkt Matrix::multiply(Punkt &p)
 {
     Punkt temp;
+    temp.x = data[0][0] * p.x + data[0][1] * p.y + data[0][2] * p.z + data[0][3]*p.w;
+    temp.y = data[1][0] * p.x + data[1][1] * p.y + data[1][2] * p.z + data[1][3]*p.w;
+    temp.z = data[2][0] * p.x + data[2][1] * p.y + data[2][2] * p.z + data[2][3]*p.w;
+    temp.w = data[3][0] * p.x + data[3][1] * p.y + data[3][2] * p.z + data[3][3]*p.w;
+    return temp;
+}
+
+Punkt Matrix::operator*(Punkt &p)
+{
+    Punkt temp;
+
     temp.x = data[0][0] * p.x + data[0][1] * p.y + data[0][2] * p.z + data[0][3]*p.w;
     temp.y = data[1][0] * p.x + data[1][1] * p.y + data[1][2] * p.z + data[1][3]*p.w;
     temp.z = data[2][0] * p.x + data[2][1] * p.y + data[2][2] * p.z + data[2][3]*p.w;
@@ -189,15 +204,15 @@ MyWindow::MyWindow(QWidget *parent) : QWidget(parent)
     SrotationZ->setValue(0);
 
     SscalingX = new QSlider(Qt::Horizontal);
-    SscalingX->setRange(-100, 100);
+    SscalingX->setRange(0, 100);
     SscalingX->setValue(0);
 
     SscalingY = new QSlider(Qt::Horizontal);
-    SscalingY->setRange(-100, 100);
+    SscalingY->setRange(0, 100);
     SscalingY->setValue(0);
 
     SscalingZ = new QSlider(Qt::Horizontal);
-    SscalingZ->setRange(-100, 100);
+    SscalingZ->setRange(0, 100);
     SscalingZ->setValue(0);
 
     boxLayout->addWidget(translationX);
@@ -234,10 +249,10 @@ MyWindow::MyWindow(QWidget *parent) : QWidget(parent)
     connect(StranslationZ, SIGNAL(valueChanged(int)), this, SLOT(slot_translationZ(int)));
     connect(SrotationX, SIGNAL(valueChanged(int)), this, SLOT(slot_rotationX(int)));
     connect(SrotationY, SIGNAL(valueChanged(int)), this, SLOT(slot_rotationY(int)));
-    connect(SrotationZ, SIGNAL(valueChanged(int)), this, SLOT(slot_rotationY(int)));
+    connect(SrotationZ, SIGNAL(valueChanged(int)), this, SLOT(slot_rotationZ(int)));
     connect(SscalingX, SIGNAL(valueChanged(int)), this, SLOT(slot_scalingX(int)));
     connect(SscalingY, SIGNAL(valueChanged(int)), this, SLOT(slot_scalingY(int)));
-    connect(SscalingZ, SIGNAL(valueChanged(int)), this, SLOT(slot_scalingY(int)));
+    connect(SscalingZ, SIGNAL(valueChanged(int)), this, SLOT(slot_scalingZ(int)));
 
     VtranslationX= 0;
     VtranslationY= 0;
@@ -364,31 +379,18 @@ void MyWindow::makeCube(int r)
 
     Matrix cubeTransformated[8];
 
-    cubeTransformated[0].setTranslation(centerX-r,centerY-r,r); //lgf
-    cubeTransformated[1].setTranslation(centerX+r,centerY-r,r); //pgf
-    cubeTransformated[2].setTranslation(centerX+r,centerY+r,r); //pdf
-    cubeTransformated[3].setTranslation(centerX-r,centerY+r,r); //ldf
-    cubeTransformated[4].setTranslation(centerX-r,centerY-r,r); //lgb
-    cubeTransformated[5].setTranslation(centerX+r,centerY-r,r); //pgb
-    cubeTransformated[6].setTranslation(centerX+r,centerY+r,r); //pdb
-    cubeTransformated[7].setTranslation(centerX-r,centerY+r,r); //ldb
+    cubePoints[0] = Punkt(centerX-r,centerY-r,r); //lgf
+    cubePoints[1] = Punkt(centerX+r,centerY-r,r); //pgf
+    cubePoints[2] = Punkt(centerX+r,centerY+r,r); //pdf
+    cubePoints[3] = Punkt(centerX-r,centerY+r,r); //ldf
+    cubePoints[4] = Punkt(centerX-r,centerY-r,-r); //lgb
+    cubePoints[5] = Punkt(centerX+r,centerY-r,-r); //pgb
+    cubePoints[6] = Punkt(centerX+r,centerY+r,-r); //pdb
+    cubePoints[7] = Punkt(centerX-r,centerY+r,-r); //ldb
 
     for(int i=0;i<8;i++)
     {
-        float x = cubeTransformated[i].data[3][0];
-        float y = cubeTransformated[i].data[3][1];
-        float z = cubeTransformated[i].data[3][2];
-        float w = cubeTransformated[i].data[3][3];
-
-        cubePoints[i].x = x;
-        cubePoints[i].y = y;
-        cubePoints[i].z = z;
-        cubePoints[i].w = w;
-
-        cubePointsT[i].x = cubePoints[i].x;
-        cubePointsT[i].y = cubePoints[i].y;
-        cubePointsT[i].z = cubePoints[i].z;
-        cubePointsT[i].w = cubePoints[i].w;
+        cubePointsT[i] = cubePoints[i];
     }
 }
 
@@ -451,20 +453,27 @@ void MyWindow::drawCube()
 
 void MyWindow::przeksztalc()
 {
-    czysc();
-    Matrix transformations;
-//    transformations.setPoints()
-    transformations.setTranslation(VtranslationX,VtranslationY,VtranslationZ);
-//    transformations.values();
+    int d = 400;
+    tMatrix.setTranslation(300,240,0);
+    tMatrix.setRotationX(VrotationX);
+    tMatrix.setRotationY(VrotationY);
+    tMatrix.setRotationZ(VrotationZ);
+    tMatrix.setScale(VscalingX/20,VscalingY/20,VscalingZ/20);
+    tMatrix.setTranslation(VtranslationX,VtranslationY,VtranslationZ);
+    tMatrix.values();
 
     for(int i=0;i<8;i++)
     {
-        cubePointsT[i] = transformations.multiply(cubePoints[i]);
-
+        cubePointsT[i].x = tMatrix.data[0][0] * cubePoints[i].x + tMatrix.data[0][1] * cubePoints[i].y + tMatrix.data[0][2] * cubePoints[i].z + tMatrix.data[0][3];
+        cubePointsT[i].y = tMatrix.data[1][0] * cubePoints[i].x + tMatrix.data[1][1] * cubePoints[i].y + tMatrix.data[1][2] * cubePoints[i].z + tMatrix.data[1][3];
+        cubePointsT[i].z = tMatrix.data[2][0] * cubePoints[i].x + tMatrix.data[2][1] * cubePoints[i].y + tMatrix.data[2][2] * cubePoints[i].z + tMatrix.data[2][3];
+        cubePointsT[i].x = (float) cubePointsT[i].x * d/(cubePointsT[i].z+d);
+        cubePointsT[i].y = (float) cubePointsT[i].y * d/(cubePointsT[i].z+d);
+        cubePointsT[i].z = 0;
     }
-
     drawCube();
     update();
+    tMatrix = Matrix();
 }
 
 void MyWindow::slot_translationX(int value)
@@ -519,7 +528,6 @@ void MyWindow::slot_scalingX(int value)
 {
     VscalingX = value;
     czysc();
-    VscalingX = (VscalingX / (float)100)+1;
     przeksztalc();
     update();
 }
@@ -528,7 +536,6 @@ void MyWindow::slot_scalingY(int value)
 {
     VscalingY = value;
     czysc();
-    VscalingY = VscalingY / (float)100;
     przeksztalc();
     update();
 }
@@ -537,7 +544,6 @@ void MyWindow::slot_scalingZ(int value)
 {
     VscalingZ = value;
     czysc();
-    VscalingZ = VscalingY / (float)100;
     przeksztalc();
     update();
 }
