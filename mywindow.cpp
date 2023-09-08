@@ -25,6 +25,11 @@ void Punkt::values()
     std::cout<<"x: "<<x<<" y: "<<y<<" z: "<<z<<" w: "<<w<<std::endl;
 }
 
+int Punkt::dot(Punkt p)
+{
+     return x * p.x + y * p.y + z * p.z;
+}
+
 Matrix::Matrix() {
     for (int i = 0; i < 4; i++)
     {
@@ -161,7 +166,8 @@ MyWindow::MyWindow(QWidget *parent) : QWidget(parent)
     poczY = 25;
 
     screen = new QImage(szer,wys,QImage::Format_RGB32);
-    orig = new QImage(szer,wys,QImage::Format_RGB32);
+    QString path = "C:/Users/Kuba/Desktop/grafika/trzyDe_oswietlenie/img2.png";
+    texture = new QImage(path);
 
     grupa = new QGroupBox("Sterowanie",this);
 
@@ -273,7 +279,7 @@ MyWindow::MyWindow(QWidget *parent) : QWidget(parent)
 MyWindow::~MyWindow()
 {
     delete screen;
-    delete orig;
+    delete texture;
 }
 
 void MyWindow::paintEvent(QPaintEvent*)
@@ -281,6 +287,7 @@ void MyWindow::paintEvent(QPaintEvent*)
     QPainter p(this);
 
     p.drawImage(poczX,poczY,*screen);
+//    p.drawImage(poczX,poczY,*texture);
 }
 
 void MyWindow::mousePressEvent(QMouseEvent *event)
@@ -298,7 +305,18 @@ void MyWindow::mouseMoveEvent(QMouseEvent *event)
 
 }
 
-void MyWindow::setPixelColor(int x, int y, int color[3])
+std::array<int, 3> MyWindow::getPixelColor(Punkt p1)
+{
+    unsigned char *ptr = texture->bits();
+
+    return {
+        ptr[texture->width()*4*p1.y + 4*p1.x],
+        ptr[texture->width()*4*p1.y + 4*p1.x + 1],
+        ptr[texture->width()*4*p1.y + 4*p1.x + 2]
+    };
+}
+
+void MyWindow::setPixelColor(int x, int y, std::array<int, 3> color)
 {
     if (x >= 0 && x <= szer && y >= 0 && y <= wys) {
         unsigned char *ptr = screen->bits();
@@ -310,9 +328,9 @@ void MyWindow::setPixelColor(int x, int y, int color[3])
 }
 
 void MyWindow::copy() {
-    unsigned char *origPtr = orig->bits();
+    unsigned char *origPtr = texture->bits();
     unsigned char *screenPtr = screen->bits();
-    int imageSize = orig->width() * orig->height() * 4;
+    int imageSize = texture->width() * texture->height() * 4;
 
     for (int i = 0; i < imageSize; i++) {
         screenPtr[i] = origPtr[i];
@@ -394,61 +412,95 @@ void MyWindow::makeCube(int r)
     }
 }
 
+void MyWindow::barycentric( Punkt& P,  Punkt& A,  Punkt& B,  Punkt& C, float &u, float &v, float &w) {
+    Punkt v0 = {B.x - A.x, B.y - A.y};
+    Punkt v1 = {C.x - A.x, C.y - A.y};
+    Punkt v2 = {P.x - A.x, P.y - A.y};
+    float d00 = v0.x * v0.x + v0.y * v0.y;
+    float d01 = v0.x * v1.x + v0.y * v1.y;
+    float d11 = v1.x * v1.x + v1.y * v1.y;
+    float d20 = v2.x * v0.x + v2.y * v0.y;
+    float d21 = v2.x * v1.x + v2.y * v1.y;
+    float denom = d00 * d11 - d01 * d01;
+    v = (d11 * d20 - d01 * d21) / denom;
+    w = (d00 * d21 - d01 * d20) / denom;
+    u = 1.0f - v - w;
+}
+
+void MyWindow::mapTextureFromTriangleToTriangle(Punkt& A,  Punkt& B,  Punkt& C, Punkt& At,  Punkt& Bt,  Punkt& Ct) {
+    for (int y = 0; y < 600; ++y) {
+        for (int x = 0; x < 600; ++x) {
+            Punkt P = Punkt(x,y);
+            float u, v, w;
+            barycentric(P, A, B, C, u, v, w);
+            if (u >= 0 && v >= 0 && w >= 0) {  // Punkt P leży wewnątrz trójkąta ABC
+                Punkt Pt = Punkt(
+                    At.x * u + Bt.x * v + Ct.x * w,
+                    At.y * u + Bt.y * v + Ct.y * w);
+                std::array<int,3> color = getPixelColor(Pt);
+                setPixelColor(x, y, color);
+            }
+        }
+    }
+}
+
 void MyWindow::drawCube()
 {
-    Punkt p1;
-    Punkt p2;
-    //sciana przednia
-    p1 = cubePointsT[0];
-    p2 = cubePointsT[1];
-    drawLine(p1,p2);
+    Punkt viewDirection = {0, 0, 1};
 
-    p1 = cubePointsT[1];
-    p2 = cubePointsT[2];
-    drawLine(p1,p2);
-
-
-    p1 = cubePointsT[2];
-    p2 = cubePointsT[3];
-    drawLine(p1,p2);
-
-    p1 = cubePointsT[3];
-    p2 = cubePointsT[0];
-    drawLine(p1,p2);
-    //sciana tylnia
-    p1 = cubePointsT[4];
-    p2 = cubePointsT[5];
-    drawLine(p1,p2);
-
-    p1 = cubePointsT[5];
-    p2 = cubePointsT[6];
-    drawLine(p1,p2);
+    int faces[6][4] = {
+        {0, 1, 2, 3},
+        {4, 7, 6, 5},
+        {0, 4, 5, 1},
+        {3, 2, 6, 7},
+        {0, 3, 7, 4},
+        {1, 5, 6, 2}
+    };
 
 
-    p1 = cubePointsT[6];
-    p2 = cubePointsT[7];
-    drawLine(p1,p2);
 
-    p1 = cubePointsT[7];
-    p2 = cubePointsT[4];
-    drawLine(p1,p2);
+    for (int i = 0; i < 6; i++) {
+        Punkt p1 = cubePointsT[faces[i][0]];
+        Punkt p2 = cubePointsT[faces[i][1]];
+        Punkt p3 = cubePointsT[faces[i][2]];
 
-    //Laczenie scian
-    p1 = cubePointsT[0];
-    p2 = cubePointsT[4];
-    drawLine(p1,p2);
+        Punkt edge1 = {p2.x - p1.x, p2.y - p1.y, p2.z - p1.z};
+        Punkt edge2 = {p3.x - p1.x, p3.y - p1.y, p3.z - p1.z};
+        Punkt normal;
+        normal.x = edge1.y * edge2.z - edge1.z * edge2.y;
+        normal.y = edge1.z * edge2.x - edge1.x * edge2.z;
+        normal.z = edge1.x * edge2.y - edge1.y * edge2.x;
 
-    p1 = cubePointsT[1];
-    p2 = cubePointsT[5];
-    drawLine(p1,p2);
+        if (normal.dot(viewDirection) < 0) {
+            for (int j = 0; j < 4; j++) {
+                Punkt start = cubePointsT[faces[i][j]];
+                Punkt end = cubePointsT[faces[i][(j+1)%4]];
+                drawLine(start, end);
 
-    p1 = cubePointsT[2];
-    p2 = cubePointsT[6];
-    drawLine(p1,p2);
+            }
+            Punkt t1Start = cubePointsT[faces[i][0]];
+            Punkt t1Prosty = cubePointsT[faces[i][1]];
+            Punkt t1End = cubePointsT[faces[i][2]];
+            drawLine(t1Start, t1End);
 
-    p1 = cubePointsT[3];
-    p2 = cubePointsT[7];
-    drawLine(p1,p2);
+            Punkt txt1Start = Punkt(0,0);
+            Punkt txt1Prosty = Punkt(texture->width(),0);
+            Punkt txt1End = Punkt(0,texture->height());
+
+            Punkt t2Start = cubePointsT[faces[i][0]];
+            Punkt t2Prosty = cubePointsT[faces[i][3]];
+            Punkt t2End = cubePointsT[faces[i][2]];
+            drawLine(t2Start, t2End);
+
+            Punkt txt2Start = Punkt(texture->width(),texture->height());
+            Punkt txt2Prosty = Punkt(0,0);
+            Punkt txt2End = Punkt(0,texture->height());
+
+            mapTextureFromTriangleToTriangle(t1End,t1Start,t1Prosty,txt2Start,txt2Prosty,txt2End);
+
+            mapTextureFromTriangleToTriangle(t2End,t2Start,t2Prosty,txt1Prosty,txt1Start,txt1End);
+        }
+    }
 }
 
 void MyWindow::przeksztalc()

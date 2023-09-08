@@ -25,6 +25,7 @@ public:
     Punkt(Punkt &p);
     void operator=(Punkt p);
     void values();
+    int dot(Punkt p);
 
 };
 
@@ -64,13 +65,14 @@ class MyWindow : public QWidget
 public:
     MyWindow(QWidget *parent = 0);
     ~MyWindow();
+
 private:
     int szer;
     int wys;
     int poczX;
     int poczY;
     QImage *screen;
-    QImage *orig;
+    QImage *texture;
 
     QLabel *translationX;
     QLabel *translationY;
@@ -101,9 +103,8 @@ private:
     std::array<int, 3> getPixelColor(Punkt p1);
     std::array<int, 3> getInterColor(float x, float y);
 
-    int red[3] = {175,0,185};
+    std::array<int, 3> red = {175,0,185};
 
-    void setPixelColor(int x,int y,int color[3]);
     int VtranslationX;
     int VtranslationY;
     int VtranslationZ;
@@ -120,6 +121,9 @@ private:
     void drawCube();
     void makeCube(int r);
 
+    void barycentric( Punkt &P,  Punkt &A,  Punkt &B,  Punkt &C, float &u, float &v, float &w);
+    void mapTextureFromTriangleToTriangle(Punkt &A, Punkt &B, Punkt &C, Punkt &At, Punkt &Bt, Punkt &Ct);
+    void setPixelColor(int x, int y, std::array<int, 3> color);
 public slots:
     void slot_translationX(int value);
     void slot_translationY(int value);
